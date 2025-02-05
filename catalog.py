@@ -8,13 +8,13 @@ import numpy as np
 import requests
 
 
-class _Catalog(ABC):
+class Catalog(ABC):
     uri: str
     filename: str
 
     @property
     def cache_dir(self):
-        return Path(__file__).parent / ".cache" / "night_sky_camera_calibration"
+        return Path(__file__).parent / ".cache" / "night_sky_camera_calibration" / "catalogs"
 
     @property
     def path(self):
@@ -42,11 +42,11 @@ class _Catalog(ABC):
         return self.read()
 
     @abstractmethod
-    def read(self):
+    def read(self) -> tuple[SkyCoord, np.ndarray]:
         pass
 
 
-class BSC5(_Catalog):
+class BSC5(Catalog):
     uri = "http://tdc-www.harvard.edu/catalogs/BSC5"
     filename = "BSC5"
 
@@ -82,7 +82,7 @@ class BSC5(_Catalog):
         )
 
 
-class PPM(_Catalog):
+class PPM(Catalog):
     uri = "http://tdc-www.harvard.edu/catalogs/PPM"
     filename = "PPM"
 
@@ -117,7 +117,7 @@ class PPM(_Catalog):
         )
 
 
-class IRAS(_Catalog):
+class IRAS(Catalog):
     uri = "http://tdc-www.harvard.edu/catalogs/IRAS"
     filename = "IRAS"
 
@@ -144,7 +144,7 @@ class IRAS(_Catalog):
         )
 
 
-class SAO(_Catalog):
+class SAO(Catalog):
     uri = "http://tdc-www.harvard.edu/catalogs/SAO"
     filename = "SAO"
 
@@ -180,7 +180,7 @@ class SAO(_Catalog):
         )
 
 
-catalogs = {
+catalogs: dict[str, type[Catalog]] = {
     "BSC5": BSC5,
     "IRAS": IRAS,
     "PPM": PPM,

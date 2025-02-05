@@ -1,0 +1,6 @@
+astropy
+numpy
+photutils
+requests
+scipy
+tqdm

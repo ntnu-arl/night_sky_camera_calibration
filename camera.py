@@ -1,4 +1,4 @@
-from astropy.coordinates import SkyCoord
+from astropy.coordinates import AltAz, SkyCoord
 from pathlib import Path
 import numpy as np
 import yaml
@@ -17,7 +17,7 @@ class Camera:
         if "camera_matrix" in data:
             camera_matrix = np.array(data["camera_matrix"])
         else:
-            camera_matrix = create_camera_matrix(
+            camera_matrix = _create_camera_matrix(
                 data["focal_length"],
                 (data["sensor_size"]["width"], data["sensor_size"]["height"]),
                 (data["image_size"]["width"], data["image_size"]["height"])
@@ -42,7 +42,6 @@ class Camera:
 
     def to_camera_frame(self, coords: SkyCoord, orientation: np.ndarray):
         c = coords.cartesian.xyz.value.copy()
-        c[1] *= -1
         c = orientation.T @ c
         return c
 
@@ -64,25 +63,15 @@ class Camera:
         r4 = r2 * r2
         r6 = r2 * r4
         d = 1 + self.distortion_coefficients[0] * r2 + self.distortion_coefficients[1] * r4 + self.distortion_coefficients[4] * r6
-        x_d = x * d
-        y_d = y * d
-        x_d += 2 * self.distortion_coefficients[2] * xy + self.distortion_coefficients[3] * (r2 + 2 * x2)
-        y_d += 2 * self.distortion_coefficients[3] * xy + self.distortion_coefficients[2] * (r2 + 2 * y2)
+        x_d = x * d + 2 * self.distortion_coefficients[2] * xy + self.distortion_coefficients[3] * (r2 + 2 * x2)
+        y_d = y * d + 2 * self.distortion_coefficients[3] * xy + self.distortion_coefficients[2] * (r2 + 2 * y2)
         x_d = x_d * self.camera_matrix[0, 0] + self.camera_matrix[0, 2]
         y_d = y_d * self.camera_matrix[1, 1] + self.camera_matrix[1, 2]
 
         return np.stack([x_d, y_d]), idx
 
-        # mask = np.logical_and(
-        #     np.logical_and(x_d >= 0, x_d < width),
-        #     np.logical_and(y_d >= 0, y_d < height)
-        # )
-        # idx = idx[mask]
-        # image = np.stack([x_d[mask], y_d[mask]])
-        # return image, idx
 
-
-def create_camera_matrix(focal_length_mm, sensor_size_mm, image_size):
+def _create_camera_matrix(focal_length_mm, sensor_size_mm, image_size):
     fx = focal_length_mm / sensor_size_mm[0] * image_size[0]
     fy = focal_length_mm / sensor_size_mm[1] * image_size[1]
     cx = image_size[0] / 2
@@ -92,8 +81,3 @@ def create_camera_matrix(focal_length_mm, sensor_size_mm, image_size):
         [0, fy, cy],
         [0, 0, 1]
     ])
-
-
-if __name__ == "__main__":
-    camera = Camera.from_file(Path(__file__).parent / "test.yaml")
-    camera.to_file(Path(__file__).parent / "test2.yaml")

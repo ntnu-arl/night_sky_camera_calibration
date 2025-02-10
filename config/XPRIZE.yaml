@@ -1,11 +1,7 @@
-camera:
-  name: "BFS-PGE-244S8C-C"
-  resolution:
-    width: 5320
-    height: 4600
-  sensor_size:
-    width: 14.58
-    height: 12.60
-lens:
-  name: "F1228-MPT"
-  focal_length: 12.00
+image_size:
+  width: 5320
+  height: 4600
+sensor_size:
+  width: 14.58
+  height: 12.60
+focal_length: 12.00

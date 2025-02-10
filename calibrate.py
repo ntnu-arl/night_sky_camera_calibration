@@ -1,9 +1,8 @@
-from astropy.stats import sigma_clipped_stats
 from camera import Camera
 from catalog import load_catalog
 from data import load_images
+from detector import Detector
 from pathlib import Path
-from photutils.detection import DAOStarFinder
 from plotting import plot_night_sky, plot_sources, save_night_sky
 import numpy as np
 
@@ -37,21 +36,17 @@ if __name__ == "__main__":
         images[44]
     ]
 
+    detector = Detector(fwhm=17.0, threshold=5.0)
+
     for image in images:
         local_catalog, idx1 = image.to_local_atmo_frame(catalog)
         pred_sources, idx2 = camera.project(local_catalog, R0)
         pred_sources_vmags = vmags[idx1[idx2]]
 
-        data = image.read()
-        data = data.astype(np.float32) / 255
-        mean, median, std = sigma_clipped_stats(data, sigma=3.0)
-
-        daofind = DAOStarFinder(fwhm=17.0, threshold=5.0*std)
-        sources = daofind(data - median)
-        sources = np.array([sources["xcentroid"], sources["ycentroid"]])
+        sources = detector.detect(image)
 
         plot_sources(pred_sources, sources, image.width, image.height)
-        plot_night_sky(pred_sources, pred_sources_vmags, image.width, image.height)
+        # plot_night_sky(pred_sources, pred_sources_vmags, image.width, image.height)
         plt.show()
 
         # save_night_sky(

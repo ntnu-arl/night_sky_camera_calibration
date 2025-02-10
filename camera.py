@@ -8,7 +8,16 @@ class Camera:
     def __init__(self, camera_matrix, distortion_coefficients):
         self.camera_matrix = camera_matrix
         self.distortion_coefficients = distortion_coefficients
-    
+
+    @classmethod
+    def from_parameters(cls, focal_length, sensor_size, image_size):
+        camera_matrix = _create_camera_matrix(focal_length, sensor_size, image_size)
+        distortion_coefficients = np.zeros((5, 1))
+        return cls(
+            camera_matrix,
+            distortion_coefficients
+        )
+
     @classmethod
     def from_file(cls, path: Path):
         with open(path) as file:

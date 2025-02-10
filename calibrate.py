@@ -1,9 +1,13 @@
+from astropy.stats import sigma_clipped_stats
 from camera import Camera
 from catalog import load_catalog
 from data import load_images
 from pathlib import Path
-from plotting import save_night_sky
+from photutils.detection import DAOStarFinder
+from plotting import plot_night_sky, plot_sources, save_night_sky
 import numpy as np
+
+import matplotlib.pyplot as plt
 
 
 camera_file = Path(__file__).parent / "config" / "XPRIZE.yaml"
@@ -22,6 +26,9 @@ R0 = np.array([
 if __name__ == "__main__":
     camera = Camera.from_file(camera_file)
     catalog, vmags = load_catalog("SAO")
+    mask = vmags < 6.5
+    catalog = catalog[mask]
+    vmags = vmags[mask]
 
     images = load_images(image_dir)
     images = [
@@ -31,14 +38,26 @@ if __name__ == "__main__":
     ]
 
     for image in images:
-        image_catalog, idx1 = image.to_local_atmo_frame(catalog)
-        simualated_image, idx2 = camera.project(image_catalog, R0)
-        simualated_image_vmags = vmags[idx1[idx2]]
+        local_catalog, idx1 = image.to_local_atmo_frame(catalog)
+        pred_sources, idx2 = camera.project(local_catalog, R0)
+        pred_sources_vmags = vmags[idx1[idx2]]
 
-        save_night_sky(
-            simualated_image,
-            simualated_image_vmags,
-            image.width,
-            image.height,
-            Path(__file__).parent / "output" / f"{image.path.stem}_sim.png"
-        )
+        data = image.read()
+        data = data.astype(np.float32) / 255
+        mean, median, std = sigma_clipped_stats(data, sigma=3.0)
+
+        daofind = DAOStarFinder(fwhm=17.0, threshold=5.0*std)
+        sources = daofind(data - median)
+        sources = np.array([sources["xcentroid"], sources["ycentroid"]])
+
+        plot_sources(pred_sources, sources, image.width, image.height)
+        plot_night_sky(pred_sources, pred_sources_vmags, image.width, image.height)
+        plt.show()
+
+        # save_night_sky(
+        #     pred_sources,
+        #     pred_sources_vmags,
+        #     image.width,
+        #     image.height,
+        #     Path(__file__).parent / "output" / f"{image.path.stem}_sim.png"
+        # )

@@ -5,15 +5,24 @@ import yaml
 
 
 class Camera:
-    def __init__(self, camera_matrix, distortion_coefficients):
+    width: int
+    height: int
+    camera_matrix: np.ndarray
+    distortion_coefficients: np.ndarray
+
+    def __init__(self, width: int, height: int, camera_matrix: np.ndarray, distortion_coefficients: np.ndarray):
+        self.width = width
+        self.height = height
         self.camera_matrix = camera_matrix
         self.distortion_coefficients = distortion_coefficients
 
     @classmethod
-    def from_parameters(cls, focal_length, sensor_size, image_size):
-        camera_matrix = _create_camera_matrix(focal_length, sensor_size, image_size)
+    def from_parameters(cls, width: int, height: int, focal_length: float, sensor_size: float):
+        camera_matrix = _create_camera_matrix((width, height), sensor_size, focal_length)
         distortion_coefficients = np.zeros((5, 1))
         return cls(
+            width,
+            height,
             camera_matrix,
             distortion_coefficients
         )
@@ -21,33 +30,39 @@ class Camera:
     @classmethod
     def from_file(cls, path: Path):
         with open(path) as file:
-            data = yaml.safe_load(file)
+            camera_dict = yaml.safe_load(file)
     
-        if "camera_matrix" in data:
-            camera_matrix = np.array(data["camera_matrix"])
+        if "camera_matrix" in camera_dict:
+            camera_matrix = np.array(camera_dict["camera_matrix"])
         else:
             camera_matrix = _create_camera_matrix(
-                data["focal_length"],
-                (data["sensor_size"]["width"], data["sensor_size"]["height"]),
-                (data["image_size"]["width"], data["image_size"]["height"])
+                (camera_dict["image_size"]["width"], camera_dict["image_size"]["height"]),
+                (camera_dict["sensor_size"]["width"], camera_dict["sensor_size"]["height"]),
+                camera_dict["focal_length"]
             )
 
-        if "distortion_coefficients" in data:
-            distortion_coefficients = np.array(data["distortion_coefficients"])
+        if "distortion_coefficients" in camera_dict:
+            distortion_coefficients = np.array(camera_dict["distortion_coefficients"])
         else:
             distortion_coefficients = np.zeros((5, 1))
         
         return cls(
+            camera_dict["image_size"]["width"],
+            camera_dict["image_size"]["height"],
             camera_matrix,
             distortion_coefficients
         )
     
-    def to_file(self, path: Path):
+    def to_file(self, path: Path, **kwargs):
+        camera_dict = kwargs
+        camera_dict["image_size"] = {
+            "width": self.width,
+            "height": self.height
+        }
+        camera_dict["camera_matrix"] = self.camera_matrix.tolist()
+        camera_dict["distortion_coefficients"] = self.distortion_coefficients.tolist()
         with open(path, "w") as file:
-            yaml.dump({
-                "camera_matrix": self.camera_matrix.tolist(),
-                "distortion_coefficients": self.distortion_coefficients.tolist()
-            }, file)
+            yaml.dump(camera_dict, file)
 
     def to_camera_frame(self, coords: SkyCoord, orientation: np.ndarray):
         c = coords.cartesian.xyz.value.copy()
@@ -80,7 +95,7 @@ class Camera:
         return np.stack([x_d, y_d]), idx
 
 
-def _create_camera_matrix(focal_length_mm, sensor_size_mm, image_size):
+def _create_camera_matrix(image_size, sensor_size_mm, focal_length_mm):
     fx = focal_length_mm / sensor_size_mm[0] * image_size[0]
     fy = focal_length_mm / sensor_size_mm[1] * image_size[1]
     cx = image_size[0] / 2

@@ -5,7 +5,7 @@ import multiprocessing
 
 
 uncalibrated_file = Path(__file__).parent / "config" / "uncalibrated.yaml"
-calibrated_file = Path(__file__).parent / "config" / "checkerboard.yaml"
+calibrated_file = Path(__file__).parent / "config" / "charuco.yaml"
 image_dir = Path(__file__).parent / "data"
 
 rows = 5
@@ -34,7 +34,7 @@ if __name__ == "__main__":
     board = cv2.aruco.CharucoBoard((cols, rows), square_size, marker_size, dictionary)
 
     pool = multiprocessing.Pool(initializer=init_pool)
-    results = pool.map(detect, image_dir.glob("checkerboard_?/*.png"))
+    results = pool.map(detect, image_dir.glob("charuco_?/*.png"))
     pool.close()
     pool.join()
 

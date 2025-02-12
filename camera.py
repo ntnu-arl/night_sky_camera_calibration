@@ -19,7 +19,7 @@ class Camera:
     @classmethod
     def from_parameters(cls, width: int, height: int, focal_length: float, sensor_size: float):
         camera_matrix = _create_camera_matrix((width, height), sensor_size, focal_length)
-        distortion_coefficients = np.zeros((5, 1))
+        distortion_coefficients = np.zeros(5)
         return cls(
             width,
             height,
@@ -44,7 +44,7 @@ class Camera:
         if "distortion_coefficients" in camera_dict:
             distortion_coefficients = np.array(camera_dict["distortion_coefficients"])
         else:
-            distortion_coefficients = np.zeros((5, 1))
+            distortion_coefficients = np.zeros(5)
         
         return cls(
             camera_dict["image_size"]["width"],
@@ -54,15 +54,17 @@ class Camera:
         )
     
     def to_file(self, path: Path, **kwargs):
-        camera_dict = kwargs
-        camera_dict["image_size"] = {
-            "width": self.width,
-            "height": self.height
+        camera_dict = {
+            "image_size": {
+                "width": self.width,
+                "height": self.height
+            },
+            "camera_matrix": self.camera_matrix.tolist(),
+            "distortion_coefficients": self.distortion_coefficients.tolist()
         }
-        camera_dict["camera_matrix"] = self.camera_matrix.tolist()
-        camera_dict["distortion_coefficients"] = self.distortion_coefficients.tolist()
+        camera_dict.update(kwargs)
         with open(path, "w") as file:
-            yaml.dump(camera_dict, file)
+            yaml.dump(camera_dict, file, sort_keys=False)
 
     def to_camera_frame(self, coords: SkyCoord, orientation: np.ndarray):
         c = coords.cartesian.xyz.value.copy()
@@ -96,8 +98,8 @@ class Camera:
 
 
 def _create_camera_matrix(image_size, sensor_size_mm, focal_length_mm):
-    fx = focal_length_mm / sensor_size_mm[0] * image_size[0]
-    fy = focal_length_mm / sensor_size_mm[1] * image_size[1]
+    fx = (focal_length_mm / sensor_size_mm[0]) * image_size[0]
+    fy = (focal_length_mm / sensor_size_mm[1]) * image_size[1]
     cx = image_size[0] / 2
     cy = image_size[1] / 2
     return np.array([

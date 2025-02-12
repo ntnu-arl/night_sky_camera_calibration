@@ -7,14 +7,16 @@ import numpy as np
 
 
 class Detector:
-    def __init__(self, fwhm: float, threshold: float):
+    def __init__(self, fwhm: float, threshold: float, caching=True):
         self.fwhm = fwhm
         self.threshold = threshold
+        self.caching = caching
 
     def detect(self, image: Image):
-        cache_path = self._image_cache_path(image)
-        if cache_path.exists():
-            return np.load(cache_path)
+        if self.caching:
+            cache_path = self._image_cache_path(image)
+            if cache_path.exists():
+                return np.load(cache_path)
         
         data = image.read()
         data = data.astype(np.float32) / 255
@@ -24,8 +26,9 @@ class Detector:
         sources = daofind(data - median)
         sources = np.array([sources["xcentroid"], sources["ycentroid"]])
 
-        cache_path.parent.mkdir(parents=True, exist_ok=True)
-        np.save(cache_path, sources)
+        if self.caching:
+            cache_path.parent.mkdir(parents=True, exist_ok=True)
+            np.save(cache_path, sources)
 
         return sources
 

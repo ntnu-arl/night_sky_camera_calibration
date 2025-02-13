@@ -4,7 +4,7 @@ from catalog import load_catalog
 from data import load_images
 from detector import Detector
 from pathlib import Path
-from plotting import plot_matches, plot_night_sky, plot_sources, save_night_sky
+from plotting import plot_matches, save_night_sky
 import matplotlib.pyplot as plt
 import numpy as np
 import warnings
@@ -20,8 +20,10 @@ image_dir = Path(__file__).parent / "data" / "night_sky"
 detector_fwhm = 17.0
 coarse_max_vmag = 5.0
 coarse_detection_threshold = 12.0
+coarse_matching_thresholds = [100, 75, 50, 25, 50]
 fine_max_vmag = 6.5
 fine_detection_threshold = 5.0
+fine_matching_thresholds = [25, 5]
 
 
 if __name__ == "__main__":
@@ -51,7 +53,7 @@ if __name__ == "__main__":
         calibrator = Calibrator(camera, orientation)
         local_catalog, idx1 = image.to_local_atmo_frame(catalog[vmags < coarse_max_vmag])
         sources = detector.detect(image)
-        for threshold in [100, 75, 50, 25, 50]:
+        for threshold in coarse_matching_thresholds:
             pred_sources, idx2 = calibrator.camera.project(local_catalog, calibrator.orientation)
             matches = match_sources(pred_sources, sources, threshold=threshold)
             err = calibrator.calibrate_orientation_and_focal_length(local_catalog[idx2[matches[0]]], sources[:, matches[1]])
@@ -62,7 +64,7 @@ if __name__ == "__main__":
     print("Fine calibration")
     detector = Detector(detector_fwhm, fine_detection_threshold)
     calibrator = MultiImageCalibrator(camera, orientations)
-    for threshold in [25, 5]:
+    for threshold in fine_matching_thresholds:
         all_catalogs = []
         all_sources = []
         for image, orientation in zip(images, calibrator.orientations):

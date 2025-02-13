@@ -57,4 +57,4 @@ if __name__ == "__main__":
         dist_coeffs
     )
 
-    calibrated.to_file(calibrated_file, reprojection_error=ret)
+    calibrated.to_file(calibrated_file, error=ret)

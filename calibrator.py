@@ -9,26 +9,33 @@ class Calibrator:
         self.orientation = orientation
     
     def calibrate_orientation(self, catalog, sources):
-        x0 = np.array([0, 0, 0])
+        x0 = np.zeros(3)
+
         res = least_squares(
             self._orientation_objective,
             x0,
             args=(catalog, sources),
         )
 
-        self.orientation = self.orientation @ rodrigues(res.x)
-
         err = self._orientation_objective(res.x, catalog, sources)
         err = np.linalg.norm(err.reshape(2, -1), axis=0)
+
+        self.orientation = self.orientation @ rodrigues(res.x)
+
         return err
     
     def calibrate_orientation_and_focal_length(self, catalog, sources):
-        x0 = np.array([0, 0, 0, 1])
+        x0 = np.zeros(4)
+        x0[3] = 1
+
         res = least_squares(
             self._orientation_and_focal_length_objective,
             x0,
             args=(catalog, sources),
         )
+
+        err = self._orientation_and_focal_length_objective(res.x, catalog, sources)
+        err = np.linalg.norm(err.reshape(2, -1), axis=0)
 
         self.camera = Camera(
             self.camera.width,
@@ -38,23 +45,23 @@ class Calibrator:
         )
         self.orientation = self.orientation @ rodrigues(res.x[:3])
 
-        err = self._orientation_and_focal_length_objective(res.x, catalog, sources)
-        err = np.linalg.norm(err.reshape(2, -1), axis=0)
         return err
 
     def calibrate_orientation_and_camera_matrix(self, catalog, sources):
-        x0 = np.array([
-            0, 0, 0,
-            self.camera.camera_matrix[0, 0],
-            self.camera.camera_matrix[1, 1],
-            self.camera.camera_matrix[0, 2],
-            self.camera.camera_matrix[1, 2]
-        ])
+        x0 = np.zeros(7)
+        x0[3] = self.camera.camera_matrix[0, 0]
+        x0[4] = self.camera.camera_matrix[1, 1]
+        x0[5] = self.camera.camera_matrix[0, 2]
+        x0[6] = self.camera.camera_matrix[1, 2]
+
         res = least_squares(
             self._orientation_and_camera_matrix_objective,
             x0,
             args=(catalog, sources),
         )
+
+        err = self._orientation_and_camera_matrix_objective(res.x, catalog, sources)
+        err = np.linalg.norm(err.reshape(2, -1), axis=0)
 
         self.camera = Camera(
             self.camera.width,
@@ -68,24 +75,24 @@ class Calibrator:
         )
         self.orientation = self.orientation @ rodrigues(res.x[:3])
 
-        err = self._orientation_and_camera_matrix_objective(res.x, catalog, sources)
-        err = np.linalg.norm(err.reshape(2, -1), axis=0)
         return err
 
     def calibrate(self, catalog, sources):
-        x0 = np.array([
-            0, 0, 0,
-            self.camera.camera_matrix[0, 0],
-            self.camera.camera_matrix[1, 1],
-            self.camera.camera_matrix[0, 2],
-            self.camera.camera_matrix[1, 2],
-            *self.camera.distortion_coefficients.flatten()
-        ])
+        x0 = np.zeros(12)
+        x0[3] = self.camera.camera_matrix[0, 0]
+        x0[4] = self.camera.camera_matrix[1, 1]
+        x0[5] = self.camera.camera_matrix[0, 2]
+        x0[6] = self.camera.camera_matrix[1, 2]
+        x0[7:] = self.camera.distortion_coefficients.flatten()
+
         res = least_squares(
-            self._all_objective,
+            self._single_image_objective,
             x0,
             args=(catalog, sources),
         )
+
+        err = self._single_image_objective(res.x, catalog, sources)
+        err = np.linalg.norm(err.reshape(2, -1), axis=0)
 
         self.camera = Camera(
             self.camera.width,
@@ -99,46 +106,7 @@ class Calibrator:
         )
         self.orientation = self.orientation @ rodrigues(res.x[:3])
 
-        err = self._all_objective(res.x, catalog, sources)
-        err = np.linalg.norm(err.reshape(2, -1), axis=0)
         return err
-
-    def calibrate_all(self, all_catalogs, all_sources, all_orientations):
-        x0 = np.zeros(9 + 3 * len(all_catalogs))
-        x0[0] = self.camera.camera_matrix[0, 0]
-        x0[1] = self.camera.camera_matrix[1, 1]
-        x0[2] = self.camera.camera_matrix[0, 2]
-        x0[3] = self.camera.camera_matrix[1, 2]
-        x0[4:9] = self.camera.distortion_coefficients.flatten()
-
-        orientation = self.orientation.copy()
-
-        res = least_squares(
-            self._multi_image_objective,
-            x0,
-            args=(all_catalogs, all_sources, all_orientations),
-            verbose=2
-        )
-
-        self.camera = Camera(
-            self.camera.width,
-            self.camera.height,
-            np.array([
-                [res.x[0], 0, res.x[2]],
-                [0, res.x[1], res.x[3]],
-                [0, 0, 1]
-            ]),
-            res.x[4:9]
-        )
-        self.orientation = orientation
-
-        new_orientations = []
-        for i in range(len(all_orientations)):
-            new_orientations.append(self.orientation @ rodrigues(res.x[9 + i * 3:9 + (i + 1) * 3]))
-
-        err = self._multi_image_objective(res.x, all_catalogs, all_sources, all_orientations)
-        err = np.linalg.norm(err.reshape(2, -1), axis=0)
-        return err, new_orientations
 
     def _orientation_objective(self, x, catalog, sources):
         orientation = self.orientation @ rodrigues(x)
@@ -208,12 +176,71 @@ class Calibrator:
 
         return (src - dst).flatten()
 
-    def _multi_image_objective(self, x, all_catalogs, all_sources, all_orientations):
+
+class MultiImageCalibrator:
+    def __init__(self, camera, orientations):
+        self.camera = camera
+        self.orientations = orientations
+
+    def calibrate(self, all_catalogs, all_sources):
+        x0 = np.zeros(9 + 3 * len(all_catalogs))
+        x0[0] = self.camera.camera_matrix[0, 0]
+        x0[1] = self.camera.camera_matrix[1, 1]
+        x0[2] = self.camera.camera_matrix[0, 2]
+        x0[3] = self.camera.camera_matrix[1, 2]
+        x0[4:9] = self.camera.distortion_coefficients.flatten()
+
+        res = least_squares(
+            self._multi_image_objective,
+            x0,
+            args=(all_catalogs, all_sources),
+        )
+
+        err = self._multi_image_objective(res.x, all_catalogs, all_sources)
+        err = np.linalg.norm(err.reshape(2, -1), axis=0)
+
+        self.camera = Camera(
+            self.camera.width,
+            self.camera.height,
+            np.array([
+                [res.x[0], 0, res.x[2]],
+                [0, res.x[1], res.x[3]],
+                [0, 0, 1]
+            ]),
+            res.x[4:9]
+        )
+
+        for i in range(len(self.orientations)):
+            self.orientations[i] = self.orientations[i] @ rodrigues(res.x[9 + i * 3:9 + (i + 1) * 3])
+
+        return err
+
+    def _single_image_objective(self, x, catalog, sources, R0):
+        camera = Camera(
+            self.camera.width,
+            self.camera.height,
+            np.array([
+                [x[3], 0, x[5]],
+                [0, x[4], x[6]],
+                [0, 0, 1]
+            ]),
+            x[7:]
+        )
+        orientation = R0 @ rodrigues(x[:3])
+
+        pred_sources, idx = camera.project(catalog, orientation)
+
+        idx = nearest_neighbour(sources, pred_sources)
+        src = sources
+        dst = pred_sources[:, idx]
+
+        return (src - dst).flatten()
+
+    def _multi_image_objective(self, x, all_catalogs, all_sources):
         all_errs = []
         for i in range(len(all_catalogs)):
             xi = np.concatenate([x[9 + i * 3:9 + (i + 1) * 3], x[:9]])
-            self.orientation = all_orientations[i]
-            all_errs.append(self._single_image_objective(xi, all_catalogs[i], all_sources[i]))
+            all_errs.append(self._single_image_objective(xi, all_catalogs[i], all_sources[i], self.orientations[i]))
         return np.concatenate(all_errs)
 
 

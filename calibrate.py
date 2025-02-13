@@ -7,6 +7,10 @@ from pathlib import Path
 from plotting import plot_matches, plot_night_sky, plot_sources, save_night_sky
 import matplotlib.pyplot as plt
 import numpy as np
+import warnings
+
+
+warnings.filterwarnings("ignore", message="ERFA function")
 
 
 uncalibrated_file = Path(__file__).parent / "config" / "uncalibrated.yaml"
@@ -40,7 +44,7 @@ if __name__ == "__main__":
         images[44]
     ]
 
-    # Coarse calibration
+    print("Coarse calibration")
     detector = Detector(detector_fwhm, coarse_detection_threshold)
     orientations = []
     for image in images:
@@ -51,47 +55,41 @@ if __name__ == "__main__":
             pred_sources, idx2 = calibrator.camera.project(local_catalog, calibrator.orientation)
             matches = match_sources(pred_sources, sources, threshold=threshold)
             err = calibrator.calibrate_orientation_and_focal_length(local_catalog[idx2[matches[0]]], sources[:, matches[1]])
-            print(f"Threshold: {threshold}, Matches: {err.shape[0]}, Error: {err.mean().item()}")
+            print(f"  Image: {image.path.name}, Threshold: {threshold}, Matches: {err.shape[0]}, Error: {err.mean().item():.2f}")
         orientations.append(calibrator.orientation)
     camera = calibrator.camera
 
-    # Fine calibration
+    print("Fine calibration")
     detector = Detector(detector_fwhm, fine_detection_threshold)
-    all_catalogs = []
-    all_sources = []
-    for image, orientation in zip(images, orientations):
-        local_catalog, idx1 = image.to_local_atmo_frame(catalog[vmags < fine_max_vmag])
-        sources = detector.detect(image)
-        pred_sources, idx2 = camera.project(local_catalog, orientation)
-        matches = match_sources(pred_sources, sources, 25)
-        all_catalogs.append(local_catalog[idx2[matches[0]]])
-        all_sources.append(sources[:, matches[1]])  
     calibrator = MultiImageCalibrator(camera, orientations)
-    err = calibrator.calibrate(all_catalogs, all_sources)
+    for threshold in [25, 5]:
+        all_catalogs = []
+        all_sources = []
+        for image, orientation in zip(images, calibrator.orientations):
+            local_catalog, idx1 = image.to_local_atmo_frame(catalog[vmags < fine_max_vmag])
+            sources = detector.detect(image)
+            pred_sources, idx2 = calibrator.camera.project(local_catalog, orientation)
+            matches = match_sources(pred_sources, sources, threshold)
+            all_catalogs.append(local_catalog[idx2[matches[0]]])
+            all_sources.append(sources[:, matches[1]])
+        err = calibrator.calibrate(all_catalogs, all_sources)
+        print(f"  Threshold: {threshold}, Matches: {err.shape[0]}, Error: {err.mean().item():.2f}")
     camera = calibrator.camera
     orientations = calibrator.orientations
 
-    # plt.hist(err, bins=50)
-    # plt.show()
+    camera.to_file(calibrated_file, error=err.mean().item())
+
+    plt.hist(err, bins=50)
+    plt.show()
 
     for image, orientation in zip(images, orientations):
         local_catalog, idx1 = image.to_local_atmo_frame(catalog[vmags < fine_max_vmag])
         sources = detector.detect(image)
         pred_sources, idx2 = camera.project(local_catalog, orientation)
-        matches = match_sources(pred_sources, sources, threshold=25)
-
-        src = sources[:, matches[1]]
-        dst = pred_sources[:, matches[0]]
-        err = np.linalg.norm(src - dst, axis=0)
-        print("Matches:", err.shape[0], "Error:", err.mean().item())
+        matches = match_sources(pred_sources, sources, threshold=threshold)
 
         fig = plot_matches(pred_sources, sources, matches, image.width, image.height)
         plt.show()
 
-    # save_night_sky(
-    #     pred_sources,
-    #     pred_sources_vmags,
-    #     image.width,
-    #     image.height,
-    #     Path(__file__).parent / "output" / f"{image.path.stem}_sim.png"
-    # )
+    # Avg error: 0.46
+    # Avg distance from center of pixel to random point in pixel: 0.57

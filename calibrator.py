@@ -260,7 +260,7 @@ def mutual_nearest_neighbour(src, dst):
     return np.stack([src_idx[mask], src_neighbours[mask]])
 
 
-def match_sources(pred_sources, sources, threshold=100):
+def match_sources(pred_sources, sources, threshold):
     matches = mutual_nearest_neighbour(pred_sources, sources)
     src = pred_sources[:, matches[0]]
     dst = sources[:, matches[1]]

@@ -17,6 +17,11 @@ uncalibrated_file = Path(__file__).parent / "config" / "uncalibrated.yaml"
 calibrated_file = Path(__file__).parent / "config" / "night_sky.yaml"
 image_dir = Path(__file__).parent / "data" / "night_sky"
 
+orientation = np.array([
+    [0, 1, 0], # Camera X-axis is East, Y-axis is North, and Z-axis is up
+    [1, 0, 0], # Local frame is left-handed, so we need to flip the Y-axis
+    [0, 0, 1]
+])
 detector_fwhm = 17.0
 coarse_max_vmag = 5.0
 coarse_detection_threshold = 12.0
@@ -28,11 +33,6 @@ fine_matching_thresholds = [25, 5]
 
 if __name__ == "__main__":
     camera = Camera.from_file(uncalibrated_file)
-    orientation = np.array([
-        [0, 1, 0], # Camera X-axis is East, Y-axis is North, and Z-axis is up
-        [1, 0, 0], # Local frame is left-handed, so we need to flip the Y-axis
-        [0, 0, 1]
-    ])
 
     catalog, vmags = load_catalog("SAO")
     # mask = vmags < 6.5

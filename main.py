@@ -4,7 +4,7 @@ from catalog import load_catalog
 from data import load_images
 from detector import Detector
 from pathlib import Path
-from plotting import plot_matches, save_night_sky
+from plotting import plot_coverage, plot_matches, save_night_sky
 import matplotlib.pyplot as plt
 import numpy as np
 import warnings
@@ -81,17 +81,25 @@ if __name__ == "__main__":
 
     camera.to_file(calibrated_file, error=err.mean().item())
 
-    plt.hist(err, bins=50)
+    plt.hist(err, bins=50, align="left")
     plt.show()
 
+    all_sources = []
     for image, orientation in zip(images, orientations):
         local_catalog, idx1 = image.to_local_atmo_frame(catalog[vmags < fine_max_vmag])
         sources = detector.detect(image)
         pred_sources, idx2 = camera.project(local_catalog, orientation)
         matches = match_sources(pred_sources, sources, threshold=threshold)
 
-        fig = plot_matches(pred_sources, sources, matches, image.width, image.height)
-        plt.show()
+        all_sources.append(sources[:, matches[1]])
 
-    # Avg error: 0.46
+        # fig = plot_matches(pred_sources, sources, matches, image.width, image.height)
+        # plt.show()
+
+    plot_coverage(all_sources, image.width, image.height, labels=[image.path.name for image in images])
+    plt.show()
+
+    # Num parameters: 18
+    # Num samples: 971
+    # Avg residual error: 0.46
     # Avg distance from center of pixel to random point in pixel: 0.57

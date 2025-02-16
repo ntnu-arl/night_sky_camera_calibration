@@ -91,6 +91,25 @@ def save_night_sky(sources, vmags, width, height, path, crosshair=True):
     fig.savefig(path)
 
 
+def plot_coverage(all_sources, width, height, labels=None):
+    fig, ax = plt.subplots()
+    if labels is not None:
+        assert len(labels) == len(all_sources)
+        for sources, label in zip(all_sources, labels):
+            ax.scatter(sources[0], sources[1], label=label)
+        ax.legend()
+    else:
+        for sources in all_sources:
+            ax.scatter(sources[0], sources[1])
+    ax.set_xlim(0, width)
+    ax.set_ylim(0, height)
+    ax.invert_yaxis()
+    ax.set_aspect("equal")
+    ax.set_xticks([])
+    ax.set_yticks([])
+    return fig
+
+
 def _apparent_magnitude_to_alpha(vmags, k=3):
     m = np.power(10, -0.4 * vmags)
     m = (1 + k) * m / (1 + k * m * m)

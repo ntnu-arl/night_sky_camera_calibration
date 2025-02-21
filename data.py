@@ -53,7 +53,9 @@ class Image:
 
     def to_local_atmo_frame(self, coords: SkyCoord) -> tuple[SkyCoord, np.ndarray]:
         c = self.to_local_frame(coords)
-        mask = c.alt.deg > 10
+        # TODO: Find a better way to filter out stars outside the valid range
+        #       of the projection function. 
+        mask = c.alt.deg > 45 # This should be 10 degrees
         c = coords[mask].transform_to(self.local_atmo_frame)
         return c, np.nonzero(mask)[0]
 

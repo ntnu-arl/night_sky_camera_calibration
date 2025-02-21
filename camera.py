@@ -71,13 +71,19 @@ class Camera:
         c = orientation.T @ c
         return c
 
-    def project(self, coords: SkyCoord, orientation: np.ndarray): #, width, height):
+    def project(self, coords: SkyCoord, orientation: np.ndarray):
         idx = np.arange(len(coords))
         coords_camera = self.to_camera_frame(coords, orientation)
 
         mask = coords_camera[2] > 0
         idx = idx[mask]
         coords_camera = coords_camera[:, mask]
+
+        # TODO: Due to distortion, the projection function has a limited range
+        #       of valid input coordinates. Coordinates close to 90 degrees
+        #       from the optical axis should not be visible, but may be
+        #       projected into the image due to distortion. Coordinates outside
+        #       the valid range should be filtered out somehow.
 
         x = coords_camera[0] / coords_camera[2]
         y = coords_camera[1] / coords_camera[2]

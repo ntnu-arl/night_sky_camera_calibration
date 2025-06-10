@@ -25,7 +25,7 @@ orientation = np.array([
 detector_fwhm = 17.0
 coarse_max_vmag = 5.0
 coarse_detection_threshold = 12.0
-coarse_matching_thresholds = [100, 75, 50, 25, 50]
+coarse_matching_thresholds = [100, 75, 50, 25]
 fine_max_vmag = 6.5
 fine_detection_threshold = 5.0
 fine_matching_thresholds = [25, 5]
@@ -51,7 +51,7 @@ if __name__ == "__main__":
     orientations = []
     for image in images:
         calibrator = Calibrator(camera, orientation)
-        local_catalog, idx1 = image.to_local_atmo_frame(catalog[vmags < coarse_max_vmag])
+        local_catalog, idx1 = image.to_local_atmo_frame(catalog[vmags < coarse_max_vmag]) # pyright: ignore[reportArgumentType]
         sources = detector.detect(image)
         for threshold in coarse_matching_thresholds:
             pred_sources, idx2 = calibrator.camera.project(local_catalog, calibrator.orientation)
@@ -59,7 +59,7 @@ if __name__ == "__main__":
             err = calibrator.calibrate_orientation_and_focal_length(local_catalog[idx2[matches[0]]], sources[:, matches[1]])
             print(f"  Image: {image.path.name}, Threshold: {threshold}, Matches: {err.shape[0]}, Error: {err.mean().item():.2f}")
         orientations.append(calibrator.orientation)
-    camera = calibrator.camera
+    camera = calibrator.camera # pyright: ignore[reportPossiblyUnboundVariable]
 
     print("Fine calibration")
     detector = Detector(detector_fwhm, fine_detection_threshold)
@@ -68,7 +68,7 @@ if __name__ == "__main__":
         all_catalogs = []
         all_sources = []
         for image, orientation in zip(images, calibrator.orientations):
-            local_catalog, idx1 = image.to_local_atmo_frame(catalog[vmags < fine_max_vmag])
+            local_catalog, idx1 = image.to_local_atmo_frame(catalog[vmags < fine_max_vmag]) # pyright: ignore[reportArgumentType]
             sources = detector.detect(image)
             pred_sources, idx2 = calibrator.camera.project(local_catalog, orientation)
             matches = match_sources(pred_sources, sources, threshold)
@@ -79,24 +79,24 @@ if __name__ == "__main__":
     camera = calibrator.camera
     orientations = calibrator.orientations
 
-    camera.to_file(calibrated_file, error=err.mean().item())
+    camera.to_file(calibrated_file, error=err.mean().item()) # pyright: ignore[reportPossiblyUnboundVariable]
 
-    plt.hist(err, bins=50, align="left")
+    plt.hist(err, bins=50, align="left") # pyright: ignore[reportPossiblyUnboundVariable]
     plt.show()
 
     all_sources = []
     for image, orientation in zip(images, orientations):
-        local_catalog, idx1 = image.to_local_atmo_frame(catalog[vmags < fine_max_vmag])
+        local_catalog, idx1 = image.to_local_atmo_frame(catalog[vmags < fine_max_vmag]) # pyright: ignore[reportArgumentType]
         sources = detector.detect(image)
         pred_sources, idx2 = camera.project(local_catalog, orientation)
-        matches = match_sources(pred_sources, sources, threshold=threshold)
+        matches = match_sources(pred_sources, sources, threshold=threshold) # pyright: ignore[reportPossiblyUnboundVariable]
 
         all_sources.append(sources[:, matches[1]])
 
         # fig = plot_matches(pred_sources, sources, matches, image.width, image.height)
         # plt.show()
 
-    plot_coverage(all_sources, image.width, image.height, labels=[image.path.name for image in images])
+    plot_coverage(all_sources, image.width, image.height, labels=[image.path.name for image in images]) # pyright: ignore[reportPossiblyUnboundVariable]
     plt.show()
 
     # Num parameters: 18

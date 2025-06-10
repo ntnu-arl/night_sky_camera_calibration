@@ -68,7 +68,7 @@ def plot_night_sky(sources, vmags, width, height, crosshair=True, borderless=Fal
 
     if borderless:
         fig = plt.figure(figsize=(width / dpi, height / dpi), dpi=dpi)
-        ax = plt.Axes(fig, [0., 0., 1., 1.])
+        ax = plt.Axes(fig, (0.0, 0.0, 1.0, 1.0)) # pyright: ignore[reportPrivateImportUsage]
     else:
         fig, ax = plt.subplots()
     ax.set_facecolor("black")

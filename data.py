@@ -36,10 +36,10 @@ class Image:
         return AltAz(
             location=self.metadata.location,
             obstime=self.timestamp,
-            pressure=self.metadata.pressure * u.hPa,
-            temperature=self.metadata.temperature * u.deg_C,
+            pressure=self.metadata.pressure * u.hPa, # pyright: ignore[reportAttributeAccessIssue]
+            temperature=self.metadata.temperature * u.deg_C, # pyright: ignore[reportAttributeAccessIssue]
             relative_humidity=self.metadata.relative_humidity,
-            obswl=500 * u.nm,
+            obswl=500 * u.nm, # pyright: ignore[reportAttributeAccessIssue]
         )
 
     def read(self):
@@ -55,8 +55,8 @@ class Image:
         c = self.to_local_frame(coords)
         # TODO: Find a better way to filter out stars outside the valid range
         #       of the projection function. 
-        mask = c.alt.deg > 45 # This should be 10 degrees
-        c = coords[mask].transform_to(self.local_atmo_frame)
+        mask = c.alt.deg > 45 # pyright: ignore[reportOperatorIssue, reportOptionalMemberAccess] This should be 10 degrees
+        c = coords[mask].transform_to(self.local_atmo_frame) # pyright: ignore[reportAttributeAccessIssue]
         return c, np.nonzero(mask)[0]
 
 

@@ -72,10 +72,10 @@ class BSC5(Catalog):
                 vmag[i] = entry[5] / 100
         return (
             SkyCoord(
-                ra=ra * u.rad,
-                dec=dec * u.rad,
-                pm_ra_cosdec=pm_ra * np.cos(dec) * u.rad/u.yr,
-                pm_dec=pm_dec * u.rad/u.yr,
+                ra=ra * u.rad, # pyright: ignore[reportAttributeAccessIssue]
+                dec=dec * u.rad, # pyright: ignore[reportAttributeAccessIssue]
+                pm_ra_cosdec=pm_ra * np.cos(dec) * u.rad/u.yr, # pyright: ignore[reportAttributeAccessIssue]
+                pm_dec=pm_dec * u.rad/u.yr, # pyright: ignore[reportAttributeAccessIssue]
                 obstime=epoch
             ),
             vmag
@@ -107,10 +107,10 @@ class PPM(Catalog):
                 vmag[i] = entry[4] / 100
         return (
             SkyCoord(
-                ra=ra * u.rad,
-                dec=dec * u.rad,
-                pm_ra_cosdec=pm_ra * np.cos(dec) * u.rad/u.yr,
-                pm_dec=pm_dec * u.rad/u.yr,
+                ra=ra * u.rad, # pyright: ignore[reportAttributeAccessIssue]
+                dec=dec * u.rad, # pyright: ignore[reportAttributeAccessIssue]
+                pm_ra_cosdec=pm_ra * np.cos(dec) * u.rad/u.yr, # pyright: ignore[reportAttributeAccessIssue]
+                pm_dec=pm_dec * u.rad/u.yr, # pyright: ignore[reportAttributeAccessIssue]
                 obstime="B1950"
             ),
             vmag
@@ -124,7 +124,7 @@ class IRAS(Catalog):
     header_type = Struct(">7i")
     entry_type = Struct(">f2d2c4h")
 
-    def read(self):
+    def read(self): # pyright: ignore[reportIncompatibleMethodOverride] FIXME
         with open(self.path, "rb") as file:
             header = self.header_type.unpack(file.read(self.header_type.size))
             size = header[2]
@@ -136,8 +136,8 @@ class IRAS(Catalog):
                 dec[i] = entry[2]
         return (
             SkyCoord(
-                ra=ra * u.rad,
-                dec=dec * u.rad,
+                ra=ra * u.rad, # pyright: ignore[reportAttributeAccessIssue]
+                dec=dec * u.rad, # pyright: ignore[reportAttributeAccessIssue]
                 obstime="B1950"
             ),
             None
@@ -170,10 +170,10 @@ class SAO(Catalog):
                 vmag[i] = entry[4] / 100
         return (
             SkyCoord(
-                ra=ra * u.rad,
-                dec=dec * u.rad,
-                pm_ra_cosdec=pm_ra * np.cos(dec) * u.rad/u.yr,
-                pm_dec=pm_dec * u.rad/u.yr,
+                ra=ra * u.rad, # pyright: ignore[reportAttributeAccessIssue]
+                dec=dec * u.rad, # pyright: ignore[reportAttributeAccessIssue]
+                pm_ra_cosdec=pm_ra * np.cos(dec) * u.rad/u.yr, # pyright: ignore[reportAttributeAccessIssue]
+                pm_dec=pm_dec * u.rad/u.yr, # pyright: ignore[reportAttributeAccessIssue]
                 obstime=epoch
             ),
             vmag

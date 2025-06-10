@@ -27,8 +27,8 @@ class Detector:
         sources = np.array([sources["xcentroid"], sources["ycentroid"]])
 
         if self.caching:
-            cache_path.parent.mkdir(parents=True, exist_ok=True)
-            np.save(cache_path, sources)
+            cache_path.parent.mkdir(parents=True, exist_ok=True) # pyright: ignore[reportPossiblyUnboundVariable]
+            np.save(cache_path, sources) # pyright: ignore[reportPossiblyUnboundVariable]
 
         return sources
 

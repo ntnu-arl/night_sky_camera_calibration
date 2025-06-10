@@ -67,7 +67,7 @@ class Camera:
             yaml.dump(camera_dict, file, sort_keys=False)
 
     def to_camera_frame(self, coords: SkyCoord, orientation: np.ndarray):
-        c = coords.cartesian.xyz.value.copy()
+        c = coords.cartesian.xyz.value.copy() # pyright: ignore[reportOptionalMemberAccess]
         c = orientation.T @ c
         return c
 

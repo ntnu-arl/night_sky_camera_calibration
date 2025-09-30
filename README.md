@@ -15,7 +15,7 @@ The coarse calibration step results in a different estimate of the intrinsic par
 ## Usage
 A dataset of images of the night sky captured with the XPRIZE camera can be downloaded by running the following command in the root of the repository:
 ```bash
-curl https://mikkelst.folk.ntnu.no/night_sky_camera_calibration_data.tar.gz | tar xzf -
+git submodule update --init
 ```
 Calibration can then be performed by running the following command:
 ```bash

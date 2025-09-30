@@ -1,3 +1,0 @@
-[submodule "data"]
-	path = data
-	url = git@gitlab.stud.idi.ntnu.no:mikkelst/night_sky_camera_calibration_data.git
